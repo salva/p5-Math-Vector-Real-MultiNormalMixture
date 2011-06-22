@@ -51,6 +51,11 @@ sub density {
     $acu;
 }
 
+sub density_portion {
+    my ($self, $i, $p) = @_;
+    $self->{c}[$i] * exp($self->{isigma2}[$i] * $self->{mu}[$i]->dist2($p));
+}
+
 sub density_and_gradient {
     my ($self, $p) = @_;
     my $c = $self->{c};
@@ -161,12 +166,17 @@ The default sigma value is 1.0.
 
 =back
 
-=item $mnm->density($p)
+=item $mnm->density($x)
 
 Returns the distribution density at the given point.
 
 
-=item $dd = $mnm->density_and_gradient($p)
+=item $mnm->density_portion($i, $x)
+
+Returns the density portion associated to the multivariate normal
+C<$i>, that is C<$alpha[$i] * p[$i]($x)>.
+
+=item $dd = $mnm->density_and_gradient($x)
 
 Returns density and the gradient of the density function at the given
 point.
