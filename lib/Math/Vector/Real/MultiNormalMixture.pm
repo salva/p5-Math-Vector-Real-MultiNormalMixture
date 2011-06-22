@@ -25,8 +25,8 @@ sub new {
     my $c1 = (2 * $PI) ** (-0.5 * $dim);
     my @c = map $alpha[$_] * $c1 * ($sigma[$_] ** (-$dim)), (0..$#alpha);
     my @isigma2 = map 1.0/($_ * $_), @sigma;
-    my $c2 = -sqrt(2.0 / $PI)
-    my @second = map $c2/($_ * $_ * $_);
+    my $c2 = -sqrt(2.0 / $PI);
+    my @second = map $c2/($_ * $_ * $_), @sigma;
 
     my $self = { mu => [map Math::Vector::Real::clone($_), @$mu],
                  alpha => \@alpha,
@@ -46,14 +46,22 @@ sub density {
     my $isigma2 = $self->{sigma};
     my $acu = 0;
     for (0..$#$mu) {
-        $acu += $c->[$_] * exp($isigma2->[$_] * $mu->[$_]->dist2($p));
+        $acu += $c->[$_] * exp(-$isigma2->[$_] * $mu->[$_]->dist2($p));
     }
     $acu;
 }
 
 sub density_portion {
-    my ($self, $i, $p) = @_;
-    $self->{c}[$i] * exp($self->{isigma2}[$i] * $self->{mu}[$i]->dist2($p));
+    my $self = shift;
+    my $p = shift;
+        my $c = $self->{c};
+    my $mu = $self->{mu};
+    my $isigma2 = $self->{sigma};
+    my $acu = 0;
+    for (@_) {
+        $acu += $c->[$_] * exp(-$isigma2->[$_] * $mu->[$_]->dist2($p));
+    }
+    $acu;
 }
 
 sub density_and_gradient {
@@ -63,10 +71,10 @@ sub density_and_gradient {
     my $isigma2 = $self->{sigma};
     my $d = 0;
     my $g = $Math::Vector::Real->zero(scalar @{$mu->[0]});
-    for (0..$#mu) {
+    for (0..$#$mu) {
         my $mu_p = $p - $mu->[$_];
         my $isigma2 = $isigma2->[$_];
-        my $Dd = $c->[$_] * exp($isigma2 * $mu_p->abs2);
+        my $Dd = $c->[$_] * exp(-$isigma2 * $mu_p->abs2);
         $d += $Dd;
         $g += -2 * $isigma2 * $mu_p * $Dd;
     }
@@ -78,7 +86,8 @@ sub max_density_estimation {
     my $mu = $self->{mu};
     my $max = $self->density($mu->[0]);
     for my $ix (1..$#$mu) {
-        my ($maxd, $g) = $self->density($mu->[$ix]);
+        my $d = $self->density($mu->[$ix]);
+        # print "d: $d\n";
         $max = $d if $d > $max;
     }
     return $max;
@@ -171,10 +180,10 @@ The default sigma value is 1.0.
 Returns the distribution density at the given point.
 
 
-=item $mnm->density_portion($i, $x)
+=item $mnm->density_portion($x, $i0, $i1, $i2, ...)
 
-Returns the density portion associated to the multivariate normal
-C<$i>, that is C<$alpha[$i] * p[$i]($x)>.
+Returns the density portion associated to the multivariate normals with indexes
+C<$i0>, C<$i1>, etc.
 
 =item $dd = $mnm->density_and_gradient($x)
 
